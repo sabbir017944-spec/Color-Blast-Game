@@ -5,8 +5,8 @@ const $=id=>document.getElementById(id),boardEl=$("board");
 let grid=[],score=0,moves=25,level=1,target=600,selected=null,locked=false,paused=false,soundOn=true,audio=null;
 const rand=()=>Math.floor(Math.random()*COLORS.length),sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function sound(freq=440,duration=.07){if(!soundOn)return;try{audio=audio||new(window.AudioContext||window.webkitAudioContext)();const o=audio.createOscillator(),g=audio.createGain();o.frequency.value=freq;o.type="sine";g.gain.setValueAtTime(.04,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+duration);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+duration)}catch(e){}}
-function hasRun(r,c,v){return(c>=2&&grid[r][c-1].color===v&&grid[r][c-2].color===v)||(r>=2&&grid[r-1][c].color===v&&grid[r-2][c].color===v)}
-function fresh(){grid=Array.from({length:N},(_,r)=>Array.from({length:N},(_,c)=>{let v=rand(),tries=0;while(hasRun(r,c,v)&&tries++<20)v=rand();return{color:v,power:null}}))}
+function hasRunOn(board,r,c,v){return(c>=2&&board[r][c-1].color===v&&board[r][c-2].color===v)||(r>=2&&board[r-1][c].color===v&&board[r-2][c].color===v)}
+function fresh(){const next=[];for(let r=0;r<N;r++){const row=[];for(let c=0;c<N;c++){let v=rand(),tries=0;while(hasRunOn(next,r,c,v)&&tries++<20)v=rand();row.push({color:v,power:null})}next.push(row)}grid=next}
 function matches(){
  const s=new Set(),runs=[];
  for(let r=0;r<N;r++){let a=0;for(let c=1;c<=N;c++){if(c<N&&grid[r][c].color===grid[r][a].color)continue;if(c-a>=3){const cells=[];for(let k=a;k<c;k++){s.add(r*N+k);cells.push(r*N+k)}runs.push(cells)}a=c}}
