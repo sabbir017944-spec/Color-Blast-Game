@@ -72,7 +72,6 @@ footer span{color:#ff83bd;margin:0 4px}
 .menu-tip{text-align:center;color:#aaa5ca;font-size:11px;margin:8px 0 2px}
 @media(max-width:370px){.game-card{padding:13px}.board{gap:3px}.gem{border-radius:7px}.stats{gap:4px}.stat{gap:3px}.stat-icon{font-size:16px}.stat strong{font-size:15px}.secondary-button{font-size:12px}}
 @media(min-width:600px){body{padding-top:28px}.game-card{padding:22px}.board{gap:6px}.gem{border-radius:12px}}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 
 /* V20: polished, lightweight game feedback animations */
 .gem{transition:transform .14s cubic-bezier(.2,.8,.2,1),box-shadow .14s ease,border-color .14s ease}
@@ -91,4 +90,10 @@ footer span{color:#ff83bd;margin:0 4px}
 .secondary-button:active{transform:translateY(2px) scale(.97);background:#ffffff26}
 .primary-button{transition:transform .13s ease,filter .13s ease}
 .primary-button:active{transform:scale(.97);filter:brightness(1.15)}
-@media(prefers-reduced-motion:reduce){.gem.selected,.gem.special-gem,.gem.clearing,.board.board-burst,.level-tile.current{animation:none!important}}
+
+/* V21: requested game animations remain active on mobile */
+.gem.selected{animation:selectedPulse .85s ease-in-out infinite alternate!important}
+.gem.special-gem{animation:specialShine 2.4s ease-in-out infinite alternate!important}
+.gem.clearing{animation:gemBurst .34s cubic-bezier(.18,.75,.25,1) forwards!important}
+.board.board-burst{animation:boardPop .24s ease-out!important}
+.level-tile.current{animation:levelGlow 1.8s ease-in-out infinite alternate!important}
