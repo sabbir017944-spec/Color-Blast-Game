@@ -1,87 +1,40 @@
 (() => {
 "use strict";
-const N=8,COLORS=["#ff5b85","#ffbd4a","#54d8c8","#6f8cff","#bd79f5","#8ed85d"],ICONS=["●","◆","⬟","★","✿","♥"];
-const $=id=>document.getElementById(id),boardEl=$("board");
-let grid=[],score=0,moves=25,level=1,target=600,selected=null,locked=false,paused=false,soundOn=true,audio=null;
-const rand=()=>Math.floor(Math.random()*COLORS.length),sleep=ms=>new Promise(r=>setTimeout(r,ms));
-function sound(freq=440,duration=.07){if(!soundOn)return;try{audio=audio||new(window.AudioContext||window.webkitAudioContext)();const o=audio.createOscillator(),g=audio.createGain();o.frequency.value=freq;o.type="sine";g.gain.setValueAtTime(.04,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+duration);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+duration)}catch(e){}}
-function hasRunOn(previousRows,currentRow,r,c,v){return(c>=2&&currentRow[c-1].color===v&&currentRow[c-2].color===v)||(r>=2&&previousRows[r-1][c].color===v&&previousRows[r-2][c].color===v)}
-function fresh(){const next=[];for(let r=0;r<N;r++){const row=[];for(let c=0;c<N;c++){let v=rand(),tries=0;while(hasRunOn(next,row,r,c,v)&&tries++<20)v=rand();row.push({color:v,power:null})}next.push(row)}grid=next}
-function matches(){
- const s=new Set(),runs=[];
- for(let r=0;r<N;r++){let a=0;for(let c=1;c<=N;c++){if(c<N&&grid[r][c].color===grid[r][a].color)continue;if(c-a>=3){const cells=[];for(let k=a;k<c;k++){s.add(r*N+k);cells.push(r*N+k)}runs.push(cells)}a=c}}
- for(let c=0;c<N;c++){let a=0;for(let r=1;r<=N;r++){if(r<N&&grid[r][c].color===grid[a][c].color)continue;if(r-a>=3){const cells=[];for(let k=a;k<r;k++){s.add(k*N+c);cells.push(k*N+c)}runs.push(cells)}a=r}}
- return{set:s,runs};
-}
-function render(){
- boardEl.innerHTML="";
- for(let r=0;r<N;r++)for(let c=0;c<N;c++){
-  const cell=grid[r][c],b=document.createElement("button");
-  b.className="gem"+(selected&&selected.r===r&&selected.c===c?" selected":"")+(cell.power?" special-gem "+cell.power:"");
-  b.style.setProperty("--gem",COLORS[cell.color]);b.setAttribute("role","gridcell");
-  b.setAttribute("aria-label","Row "+(r+1)+", column "+(c+1)+", "+(cell.power==="bomb"?"bomb":cell.power==="rainbow"?"rainbow gem":"gem"));
-  b.innerHTML="<span>"+(cell.power==="bomb"?"💣":cell.power==="rainbow"?"🌈":ICONS[cell.color])+"</span>";
-  b.disabled=locked||paused;b.addEventListener("click",()=>tap(r,c));boardEl.appendChild(b);
- }
-}
-function update(){$("score").textContent=score.toLocaleString();$("moves").textContent=moves;$("target").textContent=target.toLocaleString();$("level").textContent=level;$("progressBar").style.width=Math.min(100,score/target*100)+"%"}
-function adjacent(a,b){return Math.abs(a.r-b.r)+Math.abs(a.c-b.c)===1}
-function specialForSwap(a,b,runs){
- const line=runs.find(run=>run.length>=5&&run.includes(b.r*N+b.c))||runs.find(run=>run.length>=5&&run.includes(a.r*N+a.c));
- if(line)return{index:line.includes(b.r*N+b.c)?b.r*N+b.c:a.r*N+a.c,power:"rainbow"};
- const four=runs.find(run=>run.length===4&&run.includes(b.r*N+b.c))||runs.find(run=>run.length===4&&run.includes(a.r*N+a.c));
- if(four)return{index:four.includes(b.r*N+b.c)?b.r*N+b.c:a.r*N+a.c,power:"bomb"};
- return null;
-}
-async function tap(r,c){
- if(locked||paused)return;const p={r,c};
- if(!selected){selected=p;render();return}
- if(selected.r===r&&selected.c===c){selected=null;render();return}
- if(!adjacent(selected,p)){selected=p;render();return}
- const a=selected,b=p;selected=null;[grid[a.r][a.c],grid[b.r][b.c]]=[grid[b.r][b.c],grid[a.r][a.c]];
- const found=matches();
- if(!found.set.size){[grid[a.r][a.c],grid[b.r][b.c]]=[grid[b.r][b.c],grid[a.r][a.c]];sound(180);$("hint").textContent="No match — try another swap!";render();return}
- const created=specialForSwap(a,b,found.runs);locked=true;moves--;sound(520);
- await resolve([...found.set],created);locked=false;update();render();
- if(score>=target)showModal(true);else if(moves<=0)showModal(false);
-}
-async function resolve(initial,created){
- let clear=initial;
- while(clear.length){
-  const clearSet=new Set(clear);
-  if(created){const i=created.index, r=Math.floor(i/N),c=i%N;grid[r][c].power=created.power;clearSet.delete(i);$("hint").textContent=created.power==="rainbow"?"Rainbow Gem created! 🌈":"Bomb created! 💣";}
-  let activated=true;
-  while(activated){activated=false;
-   for(const i of [...clearSet]){
-    const cell=grid[Math.floor(i/N)][i%N];
-    if(!cell||!cell.power)continue;
-    if(cell.power==="bomb"){
-     const r=Math.floor(i/N),c=i%N;
-     for(let rr=Math.max(0,r-1);rr<=Math.min(N-1,r+1);rr++)for(let cc=Math.max(0,c-1);cc<=Math.min(N-1,c+1);cc++){const j=rr*N+cc;if(!clearSet.has(j)){clearSet.add(j);activated=true}}
-    }else if(cell.power==="rainbow"){
-     const counts=Array(COLORS.length).fill(0);
-     grid.flat().forEach(x=>{if(x)counts[x.color]++});
-     const chosen=counts.indexOf(Math.max(...counts));
-     grid.flat().forEach((x,j)=>{if(x&&x.color===chosen&&!clearSet.has(j)){clearSet.add(j);activated=true}});
-    }
-   }
-  }
-  score+=clearSet.size*20+(clearSet.size>=4?50:0);
-  clearSet.forEach(i=>{grid[Math.floor(i/N)][i%N]=null});
-  render();sound(660,.12);await sleep(180);
-  for(let c=0;c<N;c++){
-   const kept=[];for(let r=N-1;r>=0;r--)if(grid[r][c])kept.push(grid[r][c]);
-   for(let r=N-1;r>=0;r--)grid[r][c]=r>=N-kept.length?kept[N-1-r]:{color:rand(),power:null};
-  }
-  render();await sleep(130);clear=matches().set.size?[...matches().set]:[];created=null;
- }
- update();$("hint").textContent="Great match! Keep it going!";
-}
-function showModal(won){$("modalIcon").textContent=won?"🏆":"💫";$("modalEyebrow").textContent=won?"LEVEL CLEARED":"NICE TRY";$("modalTitle").textContent=won?"Amazing!":"Out of moves!";$("modalText").textContent=won?"You scored "+score.toLocaleString()+" points! Ready for the next level?":"You scored "+score.toLocaleString()+" points. Try again and beat the target!";$("modalAction").textContent=won?"Next level →":"Try again ↻";$("modalAction").onclick=()=>{$("modal").classList.add("hidden");if(won){level++;target=Math.round(target*1.3);moves=25}else{score=0;moves=25}start()};$("modal").classList.remove("hidden")}
-function start(){selected=null;paused=false;locked=false;fresh();update();render();$("pauseBtn").innerHTML="Ⅱ <span>Pause</span>";$("hint").textContent="Swap two gems to match 3 or more!"}
-$("restartBtn").addEventListener("click",()=>{score=0;moves=25;start();sound(350)});
-$("shuffleBtn").addEventListener("click",()=>{if(locked||paused)return;fresh();selected=null;render();$("hint").textContent="Fresh board! Find a match.";sound(480)});
-$("pauseBtn").addEventListener("click",()=>{if(locked)return;paused=!paused;$("pauseBtn").innerHTML=paused?"▶ <span>Resume</span>":"Ⅱ <span>Pause</span>";$("hint").textContent=paused?"Game paused. Tap Resume to continue.":"Back to the puzzle!";render()});
-$("soundBtn").addEventListener("click",()=>{soundOn=!soundOn;$("soundBtn").textContent=soundOn?"♫":"♪";if(soundOn)sound(500)});
-start();
+const SIZE=8, COLORS=["#ff5b85","#ffbd4a","#54d8c8","#6f8cff","#bd79f5","#8ed85d"], SYMBOLS=["●","◆","⬟","★","✿","♥"];
+const $=id=>document.getElementById(id), boardEl=$("board");
+let board=[],score=0,moves=25,level=1,target=600,selected=null,busy=false,paused=false,soundOn=true,audioCtx=null,hintTimer=null;
+const BEST_KEY="colorBlastBestV2", SAVE_KEY="colorBlastProgressV2";
+let best=Number(localStorage.getItem(BEST_KEY)||0);
+const randomColor=()=>Math.floor(Math.random()*COLORS.length),wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+function cell(color,power=null){return{color,power}}
+function hasStartMatch(rows,row,r,c,color){return(c>=2&&row[c-1].color===color&&row[c-2].color===color)||(r>=2&&rows[r-1][c].color===color&&rows[r-2][c].color===color)}
+function createBoard(){const rows=[];for(let r=0;r<SIZE;r++){const row=[];for(let c=0;c<SIZE;c++){let color=randomColor(),tries=0;while(hasStartMatch(rows,row,r,c,color)&&tries<30){color=randomColor();tries++}row.push(cell(color))}rows.push(row)}board=rows;if(!findPossibleMove())createBoard()}
+function playTone(freq=440,duration=.07){if(!soundOn)return;try{audioCtx=audioCtx||new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==="suspended")audioCtx.resume();const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type="sine";osc.frequency.value=freq;gain.gain.setValueAtTime(.045,audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);osc.connect(gain);gain.connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+duration)}catch(e){}}
+function allMatches(source=board){const cells=new Set(),runs=[];for(let r=0;r<SIZE;r++){let start=0;for(let c=1;c<=SIZE;c++){if(c<SIZE&&source[r][c].color===source[r][start].color)continue;const len=c-start;if(len>=3){const run=[];for(let x=start;x<c;x++){const i=r*SIZE+x;cells.add(i);run.push(i)}runs.push(run)}start=c}}for(let c=0;c<SIZE;c++){let start=0;for(let r=1;r<=SIZE;r++){if(r<SIZE&&source[r][c].color===source[start][c].color)continue;const len=r-start;if(len>=3){const run=[];for(let x=start;x<r;x++){const i=x*SIZE+c;cells.add(i);run.push(i)}runs.push(run)}start=r}}return{cells,runs}}
+function findPossibleMove(){for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){for(const [dr,dc] of [[0,1],[1,0]]){const rr=r+dr,cc=c+dc;if(rr>=SIZE||cc>=SIZE)continue;[board[r][c],board[rr][cc]]=[board[rr][cc],board[r][c]];const ok=allMatches().cells.size>0||board[r][c].power||board[rr][cc].power;[board[r][c],board[rr][cc]]=[board[rr][cc],board[r][c]];if(ok)return true}}return false}
+function render(){boardEl.innerHTML="";for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){const item=board[r][c],button=document.createElement("button"),isSelected=selected&&selected.r===r&&selected.c===c;button.type="button";button.className="gem"+(isSelected?" selected":"")+(item.power?" special-gem "+item.power:"");button.style.setProperty("--gem",COLORS[item.color]);button.setAttribute("role","gridcell");button.setAttribute("aria-label",item.power==="bomb"?"Bomb power gem":item.power==="rainbow"?"Rainbow power gem":"Gem "+(item.color+1));button.innerHTML="<span>"+(item.power==="bomb"?"💣":item.power==="rainbow"?"🌈":SYMBOLS[item.color])+"</span>";button.disabled=busy||paused;button.addEventListener("click",()=>tap(r,c));boardEl.appendChild(button)}}
+function update(){ $("score").textContent=score.toLocaleString();$("moves").textContent=moves;$("target").textContent=target.toLocaleString();$("level").textContent=level;$("bestScore").textContent=best.toLocaleString();$("progressBar").style.width=Math.min(100,score/target*100)+"%";$("objective").textContent="Level "+level+" • reach "+target.toLocaleString()+" points"}
+function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify({level,score,moves,target}));localStorage.setItem(BEST_KEY,String(best))}catch(e){}}
+function specialFromRuns(a,b,runs){const bIndex=b.r*SIZE+b.c,aIndex=a.r*SIZE+a.c;let run=runs.find(x=>x.length>=5&&(x.includes(bIndex)||x.includes(aIndex)));if(run)return{index:run.includes(bIndex)?bIndex:aIndex,power:"rainbow"};run=runs.find(x=>x.length===4&&(x.includes(bIndex)||x.includes(aIndex)));if(run)return{index:run.includes(bIndex)?bIndex:aIndex,power:"bomb"};return null}
+function swap(a,b){[board[a.r][a.c],board[b.r][b.c]]=[board[b.r][b.c],board[a.r][a.c]]}
+function isAdjacent(a,b){return Math.abs(a.r-b.r)+Math.abs(a.c-b.c)===1}
+async function tap(r,c){if(busy||paused)return;const p={r,c};if(!selected){selected=p;render();return}if(selected.r===r&&selected.c===c){selected=null;render();return}if(!isAdjacent(selected,p)){selected=p;render();return}const a=selected,b=p;selected=null;swap(a,b);const found=allMatches();const special=board[a.r][a.c].power||board[b.r][b.c].power;if(!found.cells.size&&!special){swap(a,b);$("hint").textContent="No match. Try a different pair!";playTone(170);render();return}busy=true;moves--;playTone(520);if(special==="rainbow"){const other=board[a.r][a.c].power==="rainbow"?board[b.r][b.c]:board[a.r][a.c];await clearColor(other.color)}else if(special==="bomb"){await clearArea(board[a.r][a.c].power==="bomb"?a:b)}else{const created=specialFromRuns(a,b,found.runs);await resolveMatches([...found.cells],created)}busy=false;finishTurn()}
+async function clearColor(color){const ids=[];for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++)if(board[r][c].color===color)ids.push(r*SIZE+c);await clearAndDrop(ids)}
+async function clearArea(pos){const ids=[];for(let r=Math.max(0,pos.r-1);r<=Math.min(SIZE-1,pos.r+1);r++)for(let c=Math.max(0,pos.c-1);c<=Math.min(SIZE-1,pos.c+1);c++)ids.push(r*SIZE+c);await clearAndDrop(ids)}
+async function resolveMatches(ids,created){let current=ids;let special=created;let chain=0;while(current.length){chain++;if(special){const row=Math.floor(special.index/SIZE),col=special.index%SIZE;board[row][col].power=special.power;current=current.filter(i=>i!==special.index);$("hint").textContent=special.power==="bomb"?"💣 Bomb created!":"🌈 Rainbow gem created!"}await clearAndDrop(current);const next=allMatches();current=[...next.cells];special=null;if(chain>15)break}if(chain>1){$("hint").textContent="Combo x"+chain+"! Amazing!"}}
+async function clearAndDrop(ids){const clearing=new Set(ids),queue=[...ids];while(queue.length){const i=queue.pop(),r=Math.floor(i/SIZE),c=i%SIZE,item=board[r][c];if(!item||!item.power)continue;if(item.power==="bomb"){for(let rr=Math.max(0,r-1);rr<=Math.min(SIZE-1,r+1);rr++)for(let cc=Math.max(0,c-1);cc<=Math.min(SIZE-1,c+1);cc++){const j=rr*SIZE+cc;if(!clearing.has(j)){clearing.add(j);queue.push(j)}}}else if(item.power==="rainbow"){const counts=Array(COLORS.length).fill(0);board.flat().forEach(x=>{if(x)counts[x.color]++});const chosen=counts.indexOf(Math.max(...counts));board.flat().forEach((x,j)=>{if(x&&x.color===chosen&&!clearing.has(j)){clearing.add(j);queue.push(j)}})}}score+=clearing.size*20+(clearing.size>=4?50:0);if(score>best)best=score;clearing.forEach(i=>{board[Math.floor(i/SIZE)][i%SIZE]=null});render();update();playTone(680,.1);await wait(150);for(let c=0;c<SIZE;c++){const kept=[];for(let r=SIZE-1;r>=0;r--)if(board[r][c])kept.push(board[r][c]);for(let r=SIZE-1;r>=0;r--)board[r][c]=r>=SIZE-kept.length?kept[SIZE-1-r]:cell(randomColor())}render();await wait(130);save()}
+function finishTurn(){update();save();if(score>=target){showResult(true);return}if(moves<=0){showResult(false);return}if(!findPossibleMove()){createBoard();$("hint").textContent="No moves left — board shuffled!"}render()}
+function showResult(won){paused=true;render();$("modalIcon").textContent=won?"🏆":"💫";$("modalEyebrow").textContent=won?"LEVEL CLEARED":"TRY AGAIN";$("modalTitle").textContent=won?"Fantastic!":"Out of moves";$("modalText").textContent=won?"You reached "+score.toLocaleString()+" points. Ready for level "+(level+1)+"?":"You scored "+score.toLocaleString()+". Restart this level and try again."; $("modalAction").textContent=won?"Next level →":"Retry level ↻";$("modalAction").onclick=()=>{$("modal").classList.add("hidden");if(won){level++;target=Math.round(target*1.28);moves=25;score=0}else{score=0;moves=25}paused=false;createBoard();update();render();save()};$("modal").classList.remove("hidden")}
+function startNew(){score=0;moves=25;selected=null;paused=false;busy=false;createBoard();update();render();$("hint").textContent="Swap neighboring gems to match 3 or more!";save()}
+function hint(){if(busy||paused)return;for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++)for(const [dr,dc] of [[0,1],[1,0]]){const rr=r+dr,cc=c+dc;if(rr>=SIZE||cc>=SIZE)continue;swap({r,c},{r:rr,c:cc});const ok=allMatches().cells.size>0||board[r][c].power||board[rr][cc].power;swap({r,c},{r:rr,c:cc});if(ok){selected={r,c};render();$("hint").textContent="Try swapping the glowing gem with its neighbor.";if(hintTimer)clearTimeout(hintTimer);hintTimer=setTimeout(()=>{selected=null;render()},2200);return}}}
+function shuffle(){if(busy||paused)return;createBoard();selected=null;render();$("hint").textContent="Board shuffled. Find a match!";playTone(420)}
+$("hintBtn").addEventListener("click",hint);$("shuffleBtn").addEventListener("click",shuffle);$("restartBtn").addEventListener("click",startNew);
+$("pauseBtn").addEventListener("click",()=>{if(busy)return;paused=true;$("pauseShade").classList.remove("hidden");render()});
+$("resumeBtn").addEventListener("click",()=>{paused=false;$("pauseShade").classList.add("hidden");render()});
+$("helpBtn").addEventListener("click",()=>$("helpModal").classList.remove("hidden"));$("closeHelp").addEventListener("click",()=>$("helpModal").classList.add("hidden"));
+$("soundBtn").addEventListener("click",()=>{soundOn=!soundOn;$("soundBtn").textContent=soundOn?"♫":"♪";if(soundOn)playTone(500)});
+let installPrompt=null;window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();installPrompt=event;$("installBtn").hidden=false});$("installBtn").addEventListener("click",async()=>{if(!installPrompt)return;installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;$("installBtn").hidden=true});
+try{const saved=JSON.parse(localStorage.getItem(SAVE_KEY)||"null");if(saved&&Number.isFinite(saved.level)&&saved.level>0){level=saved.level;target=saved.target||600;score=saved.score||0;moves=saved.moves>0?saved.moves:25}}catch(e){}
+createBoard();update();render();
+if("serviceWorker"in navigator&&location.protocol.startsWith("http"))window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
 })();
