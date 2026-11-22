@@ -44,3 +44,38 @@
 @keyframes quickGemBurst{0%{transform:scale(1);opacity:1;filter:brightness(1)}35%{transform:scale(1.22);opacity:1;filter:brightness(2)}100%{transform:scale(.25) rotate(20deg);opacity:0}}
 @keyframes quickFlash{0%{opacity:.2;transform:scale(.5)}40%{opacity:1;transform:scale(1.5)}100%{opacity:0;transform:scale(2)}}
 @keyframes quickSelect{to{transform:scale(.9);box-shadow:0 0 12px #fff,0 0 20px var(--gem)}}
+
+
+/* Color Blast 3D visual refresh v16 — preserves the original match-3 engine */
+:root{--ink:#fff;--muted:#c8c0ec;--panel:#24194e}
+body{background:radial-gradient(ellipse at 50% -8%,#6845ad 0%,#302064 36%,#100b2d 82%);padding-top:18px}
+.app-shell{width:min(100%,520px)}
+.topbar{margin-bottom:18px}
+.brand{font-size:17px;letter-spacing:1.8px;text-shadow:0 2px 12px #d66cff66}
+.brand-mark{width:38px;height:38px;border-radius:14px;background:linear-gradient(145deg,#ffb5e3 0%,#e84bb5 42%,#7655ff 100%);box-shadow:inset 0 2px 4px #fff9,0 7px 22px #c54eff66}
+.icon-button{width:44px;height:44px;border-radius:15px;background:linear-gradient(145deg,#ffffff24,#ffffff09);box-shadow:inset 0 1px #ffffff35,0 6px 16px #08051f66}
+.game-card,.level-screen{background:linear-gradient(155deg,#382875 0%,#25194f 54%,#19113d 100%);border:1px solid #c8aaff35;box-shadow:0 25px 70px #08041f99,inset 0 1px #ffffff25}
+.game-heading h1,.menu-hero h1{color:#fff;text-shadow:0 3px 0 #58358d,0 7px 20px #c65dff55}
+.level-pill{background:linear-gradient(145deg,#ffd978 0%,#ff8eae 48%,#a45cff 100%);color:#32154f;box-shadow:inset 0 2px 5px #fff9,0 7px 22px #e65bc655}
+.stat{background:linear-gradient(145deg,#ffffff18,#ffffff08);border:1px solid #ffffff20;box-shadow:inset 0 1px #ffffff15,0 5px 14px #09051f33}
+.score-stat{background:linear-gradient(145deg,#ffd65b25,#ff9e4b0d);border-color:#ffdf8b55}
+.stat strong{color:#fff}
+.score-stat strong{color:#ffe08a;text-shadow:0 0 12px #ffd65b55}
+.progress-track{height:9px;background:#0b0825;border:1px solid #ffffff18;box-shadow:inset 0 2px 4px #0009}
+.progress-fill{background:linear-gradient(90deg,#5ff5ed,#82dfff 35%,#d18aff 72%,#ff9cce);box-shadow:0 0 13px #8cdeff99}
+.board-wrap{padding:9px;border-radius:21px;background:linear-gradient(145deg,#55418c,#24194e 48%,#120d31);border:1px solid #a9eaff55;box-shadow:0 12px 30px #05031399,inset 0 2px 5px #ffffff2b,inset 0 -5px 10px #05031399}
+.board{gap:5px;padding:2px}
+.gem{border-radius:11px;background:linear-gradient(145deg,#ffffff38,#ffffff08 48%,#00000035);box-shadow:inset 0 2px 4px #ffffff45,inset 0 -5px 7px #00000055,0 3px 5px #05031c99;overflow:hidden}
+.gem:before{inset:2px;border-radius:9px;background:radial-gradient(ellipse at 28% 17%,#ffffffa8 0%,#ffffff20 18%,transparent 35%),linear-gradient(145deg,color-mix(in srgb,var(--gem) 60%,white) 0%,var(--gem) 48%,color-mix(in srgb,var(--gem) 55%,black) 100%);clip-path:polygon(50% 0%,88% 14%,100% 53%,77% 100%,23% 100%,0 53%,12% 14%);box-shadow:inset 0 2px 5px #fff8,inset 0 -7px 8px #0005}
+.gem:after{content:'';position:absolute;width:43%;height:19%;left:16%;top:12%;border-radius:50%;background:linear-gradient(90deg,#ffffffb8,#ffffff10);filter:blur(1px);transform:rotate(-34deg)}
+.gem span{font-size:clamp(13px,4.2vw,23px);text-shadow:0 2px 3px #0009;filter:drop-shadow(0 1px 2px #0008)}
+.gem.selected{outline:3px solid #fff;outline-offset:-2px;filter:brightness(1.35) drop-shadow(0 0 8px #fff);transform:scale(.91)}
+.gem.special-gem:before{background:conic-gradient(from 20deg,#fff6a6,#ff8bc9,#8b8cff,#62eaff,#fff6a6);clip-path:polygon(50% 0%,88% 14%,100% 53%,77% 100%,23% 100%,0 53%,12% 14%)}
+.gem.clearing{animation:gemBlastV16 .28s cubic-bezier(.2,.8,.3,1) forwards}
+@keyframes gemBlastV16{0%{transform:scale(1);filter:brightness(1)}45%{transform:scale(1.22);filter:brightness(1.9) drop-shadow(0 0 9px #fff)}100%{transform:scale(.1) rotate(18deg);opacity:0}}
+.hint{color:#e6dcff;font-weight:800;text-shadow:0 1px 10px #b96cff55}
+.secondary-button{border:1px solid #ffffff25;background:linear-gradient(145deg,#ffffff20,#ffffff08);box-shadow:inset 0 1px #ffffff25,0 5px 12px #08051f66}
+.primary-button{background:linear-gradient(100deg,#ff79b9,#b26aff 55%,#6d8dff);box-shadow:inset 0 1px #ffffff66,0 8px 24px #bd50cb66}
+.level-tile{background:linear-gradient(145deg,#6952ae,#302363);box-shadow:inset 0 2px 4px #ffffff30,0 6px 14px #09051f66}
+.level-tile.current{background:linear-gradient(145deg,#ffe17e,#ff82bd 48%,#a66bff);color:#35134f;box-shadow:0 0 22px #ff9bcf99,inset 0 2px 5px #fff}
+@media(max-width:370px){.board{gap:3px}.gem{border-radius:8px}.gem:before{inset:2px;border-radius:7px}}
